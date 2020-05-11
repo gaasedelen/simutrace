@@ -782,4 +782,39 @@ namespace SimuTrace
         return len;
     }
 
+    /*
+
+    TODO/doom
+
+    */
+
+    SIMUTRACE_API
+    uint64_t StQueryAddress(StreamHandle* handlePtr,
+                            StreamSegmentId sequenceNumber, uint64_t address,
+                            QueryAddressType addressType,
+                            QueryIndexType indexType, size_t bufferSize,
+                            void* bufferOut)
+    {
+        assert(handlePtr != nullptr);
+        StreamHandle handle = *handlePtr;
+        assert(handle != nullptr);
+        assert(IsSet(handle->flags, StreamStateFlags::SsfRead));
+        assert(!IsSet(handle->flags, StreamStateFlags::SsfDynamic));
+
+        // Ensure that the handle points to the segment that we need
+        assert(handle->stream != nullptr);
+        ClientStream* strm = reinterpret_cast<ClientStream*>(handle->stream);
+
+        uint64_t result = 0;
+
+        API_TRY{
+
+            result = strm->queryAddress(sequenceNumber, address, addressType,
+                                        indexType, bufferSize, bufferOut);
+
+        } API_CATCH(result, -1);
+
+        return result;
+    }
+
 }

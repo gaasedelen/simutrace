@@ -1351,6 +1351,18 @@ extern "C"
     size_t StReadVariableData(StreamHandle* handlePtr, uint64_t reference,
                               byte* destinationBuffer);
 
+    /*
+
+    TODO/doom
+
+    */
+
+    SIMUTRACE_API
+    uint64_t StQueryAddress(StreamHandle* handlePtr, StreamSegmentId sequenceNumber,
+                            uint64_t address, QueryAddressType addressType,
+                            QueryIndexType outputType, size_t bufferSize,
+                            void* bufferOut);
+
 #ifdef __cplusplus
 }
 }

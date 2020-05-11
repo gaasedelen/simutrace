@@ -954,6 +954,11 @@ namespace Simtrace
         #endif
 
             uint32_t entryCount = ctx.getEntryCount();
+
+            //std::cout << "Encoding " << entryCount << " entries..." << std::endl;
+            std::unordered_set<uint64_t> uniqueIp;
+            uniqueIp.reserve(20'000); // TODO/doom: temp hardcoded start size
+
             for (uint32_t j = 0; j < entryCount; ++j, ++ctx.entryBuffer) {
                 const T* entry = ctx.entryBuffer;
 
@@ -961,6 +966,9 @@ namespace Simtrace
                 ipPredictor->encodeIp(&ctx.idBuffers[0],
                                       &ctx.dataBuffers[0],
                                       entry->ip);
+
+                // Collect unique instruction pointer addresses
+                uniqueIp.insert(entry->ip);
 
                 // Encode value fields (address and potentially data)
                 for (uint32_t i = 0; i < TypeInfo::dataFieldCount; ++i) {
@@ -976,12 +984,25 @@ namespace Simtrace
                                             &ctx.cycleDataBuffer,
                                             entry->metadata.cycleCount,
                                             entry->ip);
-
                 *ctx.metaDataBuffer = static_cast<uint16_t>(
                     (entry->metadata.value & ~TEMPORAL_ORDER_CYCLE_COUNT_MASK)
                     >> TEMPORAL_ORDER_CYCLE_COUNT_BITS);
                 ctx.metaDataBuffer++;
             }
+
+            // Compute the space requirements for the set to buffer translation
+            size_t ipBufferLen = uniqueIp.size() * sizeof(uint64_t);
+            size_t targetLen = target->getLength();
+            assert(ipBufferLen <= targetLen);
+
+            // Dump the ip set into a C buffer
+            uint64_t* ipBuffer = (uint64_t*)target->getBuffer();
+            std::copy(uniqueIp.begin(), uniqueIp.end(), ipBuffer);
+            //for (int i = 0; i < uniqueIp.size(); i++)
+            //    printf("0x%llx\n", ipBuffer[i]);
+
+            // Write the ip index into the frame
+            frame.addAttribute(Simtrace3AttributeType::SatIpIndex, ipBufferLen, ipBuffer);
 
             // For every successful prediction, the data space is not used and
             // there is still the data present from the last use of the
@@ -1060,7 +1081,7 @@ namespace Simtrace
 
     public:
         Simtrace3MemoryEncoder(ServerStore& store, ServerStream* stream) :
-            Simtrace3Encoder(store, "Simtrace3 Memory Encoder", stream, false),
+            Simtrace3Encoder(store, "Simtrace3 Memory Encoder", stream, true),
             _initialized(false)
         {
             // If this is just an initialization to get the friendly name,

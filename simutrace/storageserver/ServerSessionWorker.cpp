@@ -85,6 +85,9 @@ namespace SimuTrace
         m[RpcApi::CCV30_StreamCloseAndOpen]     = _handleStreamCloseAndOpen;
         m[RpcApi::CCV32_StreamCloseAndOpen]     = _handleStreamCloseAndOpen;
         m[RpcApi::CCV32_StreamClose]            = _handleStreamClose;
+
+        /* =======  Address API  ======= */
+        m[RpcApi::CCV32_QueryAddress] = _handleQueryAddress;
     }
 
     void ServerSessionWorker::_acknowledgeSessionCreate()
@@ -445,6 +448,99 @@ namespace SimuTrace
 
         stream.close(session.getId(), sseg);
         return true;
+    }
+
+    bool ServerSessionWorker::_handleQueryAddress(MessageContext& ctx)
+    {
+        //TEST_REQUEST_V32(QueryAddress, ctx.msg); TODO/doom ??
+        Session& session = ctx.worker._session;
+        ServerPort* port = ctx.worker._port.get();
+
+        StreamId id = ctx.msg.parameter0;
+        ServerStream& stream = dynamic_cast<ServerStream&>(
+            session.getStream(id));
+
+        // Unpack the address query information
+        AddressQuery* query = reinterpret_cast<AddressQuery*>(
+            ctx.msg.data.payload);
+
+        StreamWait wait;
+        size_t offsetOut;
+        SegmentId bufferSegment;
+
+        // TODO/XXX/doom: lol am i even allowed to use SERVER_SESSION_ID here?
+
+        // Seek to the beginning of the trace
+        if (query->sequenceNumber == INVALID_STREAM_SEGMENT_ID) {
+            stream.open(SERVER_SESSION_ID, QueryIndexType::QIndex, 0,
+                        StreamAccessFlags::SafSequentialScan, &bufferSegment,
+                        &offsetOut, &wait);
+        }
+
+        // Seek to a user specified sequence number to search within
+        else {
+            auto sqn = stream.open(SERVER_SESSION_ID,
+                                   QueryIndexType::QSequenceNumber,
+                                   query->sequenceNumber,
+                                   StreamAccessFlags::SafRandomAccess,
+                                   &bufferSegment, &offsetOut, &wait);
+
+            // Seek failed, so there's nothing to return
+            if (sqn != query->sequenceNumber) {
+                stream.close(SERVER_SESSION_ID);
+                port->ret(ctx.msg, RpcApi::SC_Success, nullptr, 0, 0, 0);
+                return false;
+            }
+
+        }
+
+        // The total number of query matches
+        uint64_t result = 0;
+
+        void* bufferOut = nullptr;
+        size_t bufferSizeOut = 0;
+
+        std::vector<uint64_t> foundIndexes;
+        std::vector<CycleCount> foundCycles;
+        std::vector<StreamSegmentId> foundSegments;
+
+        switch (query->indexType) {
+
+            case QueryIndexType::QIndex: {
+                std::vector<uint64_t> foundIndexes;
+                result = stream.queryAddressByIndex(query, foundIndexes);
+                bufferSizeOut = foundIndexes.size() * sizeof(uint64_t);
+                bufferOut = foundIndexes.data();
+                break;
+            }
+
+            case QueryIndexType::QCycleCount: {
+                result = stream.queryAddressByCycles(query, foundCycles);
+                bufferSizeOut = foundCycles.size() * sizeof(CycleCount);
+                bufferOut = foundCycles.data();
+                break;
+            }
+
+            case QueryIndexType::QSequenceNumber: {
+                result = stream.queryAddressBySegment(query, foundSegments);
+                bufferSizeOut = foundSegments.size() * sizeof(StreamSegmentId);
+                bufferOut = foundSegments.data();
+                break;
+            }
+
+            default: {
+                throw;
+            }
+
+        }
+
+        uint32_t upperTotal = (uint32_t)(result  >> 32);
+        uint32_t lowerTotal = (uint32_t)(result & 0xFFFFFFFF);
+
+        port->ret(ctx.msg, RpcApi::SC_Success, bufferOut, (uint32_t)bufferSizeOut, upperTotal, lowerTotal);
+
+        stream.close(SERVER_SESSION_ID);
+        return false;
     }
 
     void ServerSessionWorker::_messagePayloadAllocator(Message& msg, bool free,

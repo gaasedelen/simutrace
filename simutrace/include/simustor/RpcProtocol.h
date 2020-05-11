@@ -472,6 +472,30 @@ namespace SimuTrace
     ///
     RPC_CALL_V32C(0x0035, StreamClose, Data, 0)
 
+    /* ==========  Simutrace Storage Server - Address API  ========== */
+    ///
+    ///    QueryAddress
+    /// -----------------------------------------------------------
+    /// Routine Description:
+    ///        TODO/doom
+    ///
+    /// Arguments:
+    ///        TODO/doom
+    ///
+    /// Return Value:
+    ///        SC_Success on success, SC_Failed otherwise.
+    ///
+    ///        TODO/doom
+    ///
+    struct AddressQuery {
+        uint64_t address;
+        StreamSegmentId sequenceNumber;
+        QueryAddressType addressType;
+        QueryIndexType indexType;
+        int returnData;
+    };
+    RPC_CALL_V32C(0x0040, QueryAddress, Data, sizeof(AddressQuery)) // TODO/doom: what acceptable ID's??
+
 }
 
 #endif

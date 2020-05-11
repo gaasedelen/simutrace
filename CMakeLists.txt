@@ -76,7 +76,7 @@ set(BUILD_SRCTARBALL ON CACHE BOOL "Build source tarball")
 set(BUILD_OPENSUSE_OSC ON CACHE BOOL "Build package data for openSUSE build service")
 set(BUILD_DEBIAN ON CACHE BOOL "Build package data for debian")
 
-set(BUILD_CONFIG_MEMMGMT_SEGMENT_SIZE "64" CACHE STRING "Stream buffer segment size in MiB")
+set(BUILD_CONFIG_MEMMGMT_SEGMENT_SIZE "32" CACHE STRING "Stream buffer segment size in MiB")
 set(BUILD_CONFIG_PROFILING_SIMTRACE3_GENERIC_COMPRESSION_ENABLE OFF CACHE BOOL "Enable Simtrace3 generic compression profiling")
 set(BUILD_CONFIG_PROFILING_SIMTRACE3_VPC4_PREDICTORS_ENABLE OFF CACHE BOOL "Enable Simtrace3 VPC4 predictor profiling")
 

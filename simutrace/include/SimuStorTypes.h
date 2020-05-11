@@ -682,6 +682,27 @@ extern "C"
     } QueryIndexType;
 
 
+     /*! \brief Type for stream address queries.
+     *
+     *  The address type specifies the type of address the caller requests to
+     *  for with StQueryAddress(). Depending on the type, the supplied query value
+     *  is interpreted differently.
+     *
+     *  \remarks TODO
+     *
+     *  \since 4.0
+     *
+     *  \see StQueryAddress()
+     */
+    typedef enum _QueryAddressType {
+
+        QIp         = 0x00,  /*!< Query against an ip (instruction) address */
+
+        QMemory     = 0x01,  /*!< Query against a memory address */
+
+    } QueryAddressType;
+
+
     /*! \brief Stream access behavior
      *
      *  Describes the intended stream access behavior. Simutrace uses this as

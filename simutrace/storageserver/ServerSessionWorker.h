@@ -66,6 +66,8 @@ namespace SimuTrace
         static bool _handleStreamCloseAndOpen(MessageContext& ctx);
         static bool _handleStreamClose(MessageContext& ctx);
 
+        static bool _handleQueryAddress(MessageContext& ctx);
+
         static void _messagePayloadAllocator(Message& msg, bool free,
                                              void* args);
     private:

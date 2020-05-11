@@ -43,6 +43,7 @@ namespace Simtrace
         SatData              = 0x00,
         SatStreamDescription = 0x01,
         SatAssociatedStreams = 0x02,
+        SatIpIndex           = 0x03,
 
         /* Encoders can freely use the types from this base on */
         SatEncoderSpecific   = 0x20,

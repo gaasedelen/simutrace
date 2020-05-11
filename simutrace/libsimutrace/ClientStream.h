@@ -56,6 +56,12 @@ namespace SimuTrace
         virtual void queryInformation(
             StreamQueryInformation& informationOut) const = 0;
 
+        uint64_t queryAddress(StreamSegmentId sequenceNumber, uint64_t address,
+                          QueryAddressType addressType,
+                          QueryIndexType indexType, size_t bufferSize,
+                          void* bufferOut) const;
+
+
         StreamHandle append(StreamHandle handle);
         StreamHandle open(QueryIndexType type, uint64_t value,
                           StreamAccessFlags flags,

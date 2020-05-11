@@ -99,6 +99,42 @@ namespace SimuTrace
         }
     }
 
+    uint64_t ClientStream::queryAddress(StreamSegmentId sequenceNumber,
+                                        uint64_t address,
+                                        QueryAddressType addressType,
+                                        QueryIndexType indexType,
+                                        size_t bufferSize, void * bufferOut)
+                                        const
+    {
+        Message response = { 0 };
+        StreamId id = this->getId();
+
+        // Prepare outgoing message data
+        AddressQuery data = { address, sequenceNumber, addressType, indexType, _false};
+
+        // If the user provides a buffer, the server must return instance data
+        auto hasBuffers = (bufferSize != 0 && bufferOut != nullptr) ? _true : _false;
+        data.returnData = hasBuffers;
+
+        // Send the client address query to the server
+        _getPort().call(&response, RpcApi::CCV_QueryAddress, &data,
+                        sizeof(AddressQuery), id);
+
+        ThrowOn((response.payloadType != MessagePayloadType::MptData),
+            RpcMessageMalformedException);
+
+        if (hasBuffers)
+        {
+            assert(response.data.payload != nullptr);
+            const size_t size = response.data.payloadLength;
+            const size_t copySize = (size < bufferSize) ? size : bufferSize;
+            memcpy(bufferOut, response.data.payload, copySize);
+        }
+
+        // return the 'total' number of hits for the given query (spread across param 1 & 2)
+        return (((uint64_t)response.parameter0) << 32) | response.data.parameter1;
+    }
+
     StreamHandle ClientStream::append(StreamHandle handle)
     {
         LockScope(_lock);

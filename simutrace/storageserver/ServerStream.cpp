@@ -1018,6 +1018,63 @@ namespace SimuTrace
         _encoder->queryInformationStream(informationOut);
     }
 
+    uint64_t ServerStream::queryAddressByIndex(AddressQuery* query,
+                                               std::vector<uint64_t>& vectorOut)
+    {
+        LockScopeShared(_lock);
+        uint64_t count = 0;
+
+        // TODO/doom
+
+        return count;
+    }
+
+    uint64_t ServerStream::queryAddressByCycles(AddressQuery* query,
+                                                std::vector<CycleCount>& vectorOut)
+    {
+        LockScopeShared(_lock);
+        uint64_t count = 0;
+
+        return count;
+    }
+
+    uint64_t ServerStream::queryAddressBySegment(AddressQuery* query,
+                                                 std::vector<StreamSegmentId>& vectorOut)
+    {
+        LockScopeShared(_lock);
+
+        // TODO/doom memory indexes
+        // TODO/doom 'no data' (query->returnData) requests
+
+        // The user specified a single segment (a bit odd for this query)
+        if (query->sequenceNumber != INVALID_SEGMENT_ID)
+        {
+            ThrowOn(query->sequenceNumber > _ipIndexes.size())
+            auto sqn = query->sequenceNumber;
+
+            if (_ipIndexes[sqn]->find(query->address) != _ipIndexes[sqn]->end()) {
+                vectorOut.push_back(sqn);
+            }
+
+            return (uint64_t)vectorOut.size();
+        }
+
+        // The user did not specify a sequence number, search the whole trace
+
+        uint64_t count = 0;
+        uint64_t address = query->address;
+        vectorOut.reserve(_ipIndexes.size());
+
+        for (auto i = 0; i < _ipIndexes.size(); i++) {
+            if (_ipIndexes[i]->find(address) != _ipIndexes[i]->end()) {
+                vectorOut.push_back(i);
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     void ServerStream::addSegment(StreamSegmentId sequenceNumber,
                                   std::unique_ptr<StorageLocation>& location)
     {
@@ -1067,6 +1124,28 @@ namespace SimuTrace
         }
 
         *bufferSegmentOut = id;
+    }
+
+    void ServerStream::addSegmentIndex(StreamSegmentId sequenceNumber,
+                                       std::unique_ptr<AddressSet>& indexedAddresses,
+                                       QueryAddressType addressType)
+    {
+        LockScope(_appendLock);   // TODO/doom: is this actually needed ?
+        LockScopeExclusive(_lock);
+
+        //ThrowOnNull(indexedAddresses, ArgumentNullException, "indexedAddresses");
+        ThrowOn(sequenceNumber == INVALID_STREAM_SEGMENT_ID,
+            ArgumentOutOfBoundsException, "sequenceNumber");
+        ThrowOn(!_segmentIsAllocated(sequenceNumber),
+            InvalidOperationException);
+
+        if (addressType == QueryAddressType::QIp) {
+            //assert(_ipIndexes.size() == sequenceNumber); // TODO/doom: this assertion can fail cuz 'holes'
+            _ipIndexes.push_back(std::move(indexedAddresses));
+        }
+        else if (addressType == QueryAddressType::QMemory) {
+            // TODO: memory address query / index
+        }
     }
 
     void ServerStream::completeSegment(StreamSegmentId sequenceNumber)

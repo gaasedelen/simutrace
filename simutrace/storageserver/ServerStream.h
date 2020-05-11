@@ -63,6 +63,7 @@ namespace SimuTrace
         mutable ReaderWriterLock _lock;
 
         std::vector<SegmentLocation*> _segments;
+        std::vector<std::unique_ptr<std::unordered_set<uint64_t>>> _ipIndexes;
         std::list<SegmentLocation*> _openList;
         std::set<Range*, RangeCompare> _trees[QueryIndexType::_QMaxTree + 1];
 
@@ -126,11 +127,24 @@ namespace SimuTrace
         virtual void queryInformation(
             StreamQueryInformation& informationOut) const override;
 
+        uint64_t queryAddressByIndex(AddressQuery* query,
+                                     std::vector<uint64_t>& vectorOut);
+
+        uint64_t queryAddressByCycles(AddressQuery* query,
+                                      std::vector<CycleCount>& vectorOut);
+
+        uint64_t queryAddressBySegment(AddressQuery* query,
+                                       std::vector<StreamSegmentId>& vectorOut);
+
         void addSegment(StreamSegmentId sequenceNumber,
                         std::unique_ptr<StorageLocation>& location);
         void addSegment(SessionId session,
                         StreamSegmentId sequenceNumber,
                         SegmentId* bufferSegmentOut);
+
+        void addSegmentIndex(StreamSegmentId sequenceNumber,
+                             std::unique_ptr<AddressSet>& indexedAddresses,
+                             QueryAddressType addressType);
 
         void completeSegment(StreamSegmentId sequenceNumber);
         void completeSegment(StreamSegmentId sequenceNumber,

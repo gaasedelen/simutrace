@@ -113,14 +113,14 @@ namespace Simtrace
     void Simtrace3Store::_openFrame(FrameDirectoryEntry& entry)
     {
         const FrameHeader& fheader = entry.framelink.frameHeader;
+        Simtrace3Frame frame;
+        _readFrame(frame, entry.framelink.offset, fheader.totalSize);
 
         // Check if this is a zero frame (i.e., it contains meta data
         // for the stream and no actual data). In that case, we just
         // add the meta data to the stream (create it if it does not
         // exist). Otherwise, we add the segment as data to the stream.
         if (fheader.sequenceNumber == INVALID_STREAM_SEGMENT_ID) {
-            Simtrace3Frame frame;
-            _readFrame(frame, entry.framelink.offset, fheader.totalSize);
 
             ThrowOn(!frame.validateHash(), Exception,
                     "Corrupted metadata frame detected.");
@@ -152,8 +152,6 @@ namespace Simtrace
             Simtrace3Encoder& encoder =
                 static_cast<Simtrace3Encoder&>(stream.getEncoder());
 
-            Simtrace3Frame frame(fheader);
-
             auto location = encoder.makeStorageLocation(frame);
 
             Simtrace3StorageLocation* sim3location =
@@ -163,6 +161,22 @@ namespace Simtrace
             sim3location->size   = fheader.totalSize;
 
             stream.addSegment(fheader.sequenceNumber, location);
+
+            auto ipIndex = frame.findAttribute(Simtrace3AttributeType::SatIpIndex);
+            if (ipIndex != nullptr) {
+                auto ipCount = ipIndex->header.uncompressedSize / sizeof(uint64_t);
+                auto ipIndexBuffer = (uint64_t*)ipIndex->buffer;
+
+                auto uniqueIp = std::make_unique<AddressSet>();
+                uniqueIp->reserve(ipCount);
+
+                for (auto i = 0; i < ipCount; i++) {
+                    uniqueIp->insert(ipIndexBuffer[i]);
+                   //printf("0x%llx\n", ipIndexBuffer[i]);
+                }
+
+                stream.addSegmentIndex(fheader.sequenceNumber, uniqueIp, QueryAddressType::QIp);
+            }
         }
     }
 

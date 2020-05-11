@@ -261,6 +261,10 @@ extern "C"
 #endif
 
 #ifdef __cplusplus
+#define AddressSet std::unordered_set<uint64_t> // TODO/doom: move this ?
+#endif
+
+#ifdef __cplusplus
 }
 }
 #endif
